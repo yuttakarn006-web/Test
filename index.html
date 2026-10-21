@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OEE SCADA System</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js สำหรับวาดกราฟ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* CSS Reset & Variables */
+        :root {
+            --bg-body: #f3f4f6;
+            --sidebar-bg: #111827;
+            --sidebar-active: #2563eb;
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --primary: #2563eb;
+            --success: #16a34a;
+            --warning: #ca8a04;
+            --danger: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 1. Sidebar Styles */
+        .sidebar {
+            width: 240px;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            padding: 20px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #1f2937;
+        }
+
+        .sidebar-brand i {
+            color: var(--primary);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .sidebar-menu li a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            color: #9ca3af;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .sidebar-menu li a:hover, 
+        .sidebar-menu li.active a {
+            background-color: var(--sidebar-active);
+            color: #ffffff;
+        }
+
+        /* 2. Main Layout Structure */
+        .wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* Header Styles */
+        .header {
+            background-color: var(--card-bg);
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-box {
+            position: relative;
+            width: 320px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: #f9fafb;
+            outline: none;
+            font-size: 0.85rem;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .header-user {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4b5563;
+        }
+
+        /* Content Sections */
+        .content {
+            padding: 25px 30px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .section-view {
+            display: none;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .section-view.active {
+            display: flex;
+        }
+
+        /* 3. Summary Cards Grid */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .summary-card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .icon-blue { background-color: #dbeafe; color: #2563eb; }
+        .icon-green { background-color: #dcfce7; color: #16a34a; }
+        .icon-purple { background-color: #f3e8ff; color: #9333ea; }
+        .icon-red { background-color: #fee2e2; color: #dc2626; }
+
+        .card-info .label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .card-info .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 2px 0;
+        }
+
+        .card-info .trend {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--danger); }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        /* Pure CSS Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #f9fafb;
+            color: var(--text-muted);
+            padding: 12px 10px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-success { background-color: #dcfce7; color: #15803d; }
+        .badge-warning { background-color: #fef9c3; color: #a16207; }
+        .badge-danger { background-color: #fee2e2; color: #b91c1c; }
+
+        /* OEE Badges Colors */
+        .oee-badge-green { background-color: #16a34a; color: #ffffff; }
+        .oee-badge-yellow { background-color: #ca8a04; color: #ffffff; }
+        .oee-badge-red { background-color: #dc2626; color: #ffffff; }
+
+        /* Action Edit Button */
+        .btn-edit {
+            background-color: #ffffff;
+            color: var(--primary);
+            border: 1px solid #93c5fd;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-edit:hover {
+            background-color: #eff6ff;
+            border-color: var(--primary);
+        }
+
+        /* Modal Overlay Styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-container {
+            background-color: #ffffff;
+            width: 520px;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .modal-close {
+            background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        .form-group input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .btn-cancel {
+            background-color: #6b7280; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
+        }
+        .btn-save {
+            background-color: var(--primary); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
+        }
+
+        /* Top List Elements */
+        .top-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .top-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .machine-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .machine-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: var(--card-bg);
+            padding: 15px 30px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        .donut-container {
+            position: relative;
+            height: 220px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-cube"></i>
+            <span>Esze SCADA OEE</span>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="active" data-target="view-dashboard"><a href="#"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+            <li data-target="view-analytics"><a href="#"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+            <li data-target="view-machines"><a href="#"><i class="fa-solid fa-gears"></i> Machines</a></li>
+            <li data-target="view-downtime"><a href="#"><i class="fa-solid fa-clock-rotate-left"></i> Downtime</a></li>
+            <li data-target="view-energy"><a href="#"><i class="fa-solid fa-bolt"></i> Energy Power</a></li>
+            <li data-target="view-notifications"><a href="#"><i class="fa-solid fa-envelope"></i> Notifications</a></li>
+            <li data-target="view-settings"><a href="#"><i class="fa-solid fa-sliders"></i> Settings</a></li>
+        </ul>
+    </aside>
+
+    <div class="wrapper">
+        <!-- 2. HEADER -->
+        <header class="header">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" placeholder="Search machine, line, or logs...">
+            </div>
+            <div class="header-user">
+                <i class="fa-regular fa-bell" style="font-size: 1.2rem; color: var(--text-muted); cursor: pointer;"></i>
+                <div class="user-profile">
+                    <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+                    <span>Plant Engineer</span>
+                    <i class="fa-solid fa-chevron-down" style="font-size: 0.75rem; color: var(--text-muted);"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT CONTAINER -->
+        <main class="content">
+            
+            <!-- VIEW 1: DASHBOARD -->
+            <div id="view-dashboard" class="section-view active">
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="card-icon icon-blue"><i class="fa-solid fa-gauge-high"></i></div>
+                        <div class="card-info">
+                            <div class="label">Overall OEE</div>
+                            <div class="value" id="sumOEE">82.4%</div>
+                            <div class="trend trend-up"><i class="fa-solid fa-arrow-up"></i> 3.2% vs last shift</div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-icon icon-green"><i class="fa-solid fa-clock"></i></div>
+                        <div class="card-info">
+                            <div class="label">Availability (A)</div>
+                            <div class="value" id="sumAvail">91.5%</div>
+                            <div class="trend trend-up"><i class="fa-solid fa-arrow-up"></i> 1.8% target met</div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-icon icon-purple"><i class="fa-solid fa-bolt"></i></div>
+                        <div class="card-info">
+                            <div class="label">Performance (P)</div>
+                            <div class="value" id="sumPerf">94.2%</div>
+                            <div class="trend trend-up"><i class="fa-solid fa-arrow-up"></i> 2.4% speed gain</div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-icon icon-red"><i class="fa-solid fa-check-double"></i></div>
+                        <div class="card-info">
+                            <div class="label">Quality Rate (Q)</div>
+                            <div class="value" id="sumQual">95.6%</div>
+                            <div class="trend trend-down"><i class="fa-solid fa-arrow-down"></i> 0.5% scrap rate</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">OEE Performance Trend</div>
+                            <select style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem;">
+                                <option>Last 7 Days</option>
+                                <option>This Shift</option>
+                            </select>
+                        </div>
+                        <div style="height: 230px;">
+                            <canvas id="lineChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">OEE Loss Breakdown</div>
+                        </div>
+                        <div class="donut-container">
+                            <canvas id="donutChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="card" style="grid-column: span 1;">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fa-solid fa-gears me-2" style="color: var(--text-muted);"></i>Machine Status & Real-time Input</div>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Machine ID</th>
+                                        <th>Machine Name</th>
+                                        <th style="text-align: center;">Availability</th>
+                                        <th style="text-align: center;">Performance</th>
+                                        <th style="text-align: center;">Quality</th>
+                                        <th style="text-align: center;">OEE Score</th>
+                                        <th style="text-align: center;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="machineTableBody">
+                                    <!-- เรนเดอร์ด้วย JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Top OEE Workcells</div>
+                        </div>
+                        <div class="top-list">
+                            <div class="top-item">
+                                <div class="machine-info">
+                                    <div class="machine-icon"><i class="fa-solid fa-robot" style="color: var(--primary);"></i></div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 0.9rem;">Robotic Arm Line</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted);">980 Pcs Produced</div>
+                                    </div>
+                                </div>
+                                <span style="font-weight: 700; color: var(--success);">88.2%</span>
+                            </div>
+                            <div class="top-item">
+                                <div class="machine-info">
+                                    <div class="machine-icon"><i class="fa-solid fa-gears" style="color: #0284c7;"></i></div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 0.9rem;">CNC Milling #01</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted);">1,200 Pcs Produced</div>
+                                    </div>
+                                </div>
+                                <span style="font-weight: 700; color: var(--success);">84.5%</span>
+                            </div>
+                            <div class="top-item">
+                                <div class="machine-info">
+                                    <div class="machine-icon"><i class="fa-solid fa-box-open" style="color: var(--warning);"></i></div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 0.9rem;">Laser Cutter Unit</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted);">450 Pcs Produced</div>
+                                    </div>
+                                </div>
+                                <span style="font-weight: 700; color: var(--primary);">81.0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: ANALYTICS -->
+            <div id="view-analytics" class="section-view">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fa-solid fa-chart-line me-2"></i>Advanced OEE & Production Analytics</div>
+                    </div>
+                    <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Detailed statistical analysis of plant performance, cycle times, and loss trends over the past 30 days.</p>
+                    <div style="height: 350px;">
+                        <canvas id="analyticsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: MACHINES -->
+            <div id="view-machines" class="section-view">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fa-solid fa-gears me-2"></i>Machine Fleet Detailed Status</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Machine ID</th>
+                                <th>Machine Name</th>
+                                <th>PLC Protocol</th>
+                                <th>Status</th>
+                                <th>Cycle Time</th>
+                                <th>Total Parts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><b>#M01</b></td>
+                                <td>CNC Milling Station 01</td>
+                                <td>Mitsubishi FX5U (SLMP)</td>
+                                <td><span class="badge badge-success">Running</span></td>
+                                <td>12.0 sec</td>
+                                <td>1,800 pcs</td>
+                            </tr>
+                            <tr>
+                                <td><b>#M02</b></td>
+                                <td>Robotic Arm Assembly Line</td>
+                                <td>Modbus TCP/IP</td>
+                                <td><span class="badge badge-success">Running</span></td>
+                                <td>5.0 sec</td>
+                                <td>7,000 pcs</td>
+                            </tr>
+                            <tr>
+                                <td><b>#M03</b></td>
+                                <td>Stamping Press CNC 03</td>
+                                <td>Mitsubishi FR-D700</td>
+                                <td><span class="badge badge-warning">Minor Stop</span></td>
+                                <td>8.5 sec</td>
+                                <td>2,200 pcs</td>
+                            </tr>
+                            <tr>
+                                <td><b>#M04</b></td>
+                                <td>Auto Packaging Machine</td>
+                                <td>Modbus RTU RS485</td>
+                                <td><span class="badge badge-danger">Unplanned Down</span></td>
+                                <td>6.2 sec</td>
+                                <td>950 pcs</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 4: DOWNTIME -->
+            <div id="view-downtime" class="section-view">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fa-solid fa-clock-rotate-left me-2"></i>Downtime Incident Logs & Root Causes</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time Stamp</th>
+                                <th>Machine ID</th>
+                                <th>Category</th>
+                                <th>Duration</th>
+                                <th>Root Cause Description</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>14:32 - 15:22</td>
+                                <td><b>#M04</b></td>
+                                <td>Unplanned Breakdown</td>
+                                <td>50 min</td>
+                                <td>Conveyor belt jam at sensor #3</td>
+                                <td><span class="badge badge-danger">Resolved</span></td>
+                            </tr>
+                            <tr>
+                                <td>11:15 - 11:45</td>
+                                <td><b>#M03</b></td>
+                                <td>Planned Maintenance</td>
+                                <td>30 min</td>
+                                <td>Tooling replacement & calibration</td>
+                                <td><span class="badge badge-success">Completed</span></td>
+                            </tr>
+                            <tr>
+                                <td>09:10 - 09:25</td>
+                                <td><b>#M01</b></td>
+                                <td>Minor Stop</td>
+                                <td>15 min</td>
+                                <td>Material feeding error (Raw stock empty)</td>
+                                <td><span class="badge badge-success">Completed</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 5: ENERGY POWER -->
+            <div id="view-energy" class="section-view">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fa-solid fa-bolt me-2"></i>Schneider PM2230 Power Meter Monitoring</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Meter ID</th>
+                                <th>Machine Area</th>
+                                <th>Voltage (V)</th>
+                                <th>Current (A)</th>
+                                <th>Active Power (kW)</th>
+                                <th>Power Factor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><b>PM-01</b></td>
+                                <td>CNC Milling Station 01</td>
+                                <td>380.5 V</td>
+                                <td>45.2 A</td>
+                                <td>24.8 kW</td>
+                                <td>0.92</td>
+                            </tr>
+                            <tr>
+                                <td><b>PM-02</b></td>
+                                <td>Robotic Assembly Line</td>
+                                <td>381.0 V</td>
+                                <td>62.8 A</td>
+                                <td>35.4 kW</td>
+                                <td>0.95</td>
+                            </tr>
+                            <tr>
+                                <td><b>PM-03</b></td>
+                                <td>Stamping Press CNC 03</td>
+                                <td>379.2 V</td>
+                                <td>88.1 A</td>
+                                <td>51.2 kW</td>
+                                <td>0.89</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 6: NOTIFICATIONS -->
+            <div id="view-notifications" class="section-view">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fa-solid fa-envelope me-2"></i>System Alerts & Telegram Notifications</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Severity</th>
+                                <th>Category</th>
+                                <th>Message Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Today, 15:22</td>
+                                <td><span class="badge badge-danger">CRITICAL</span></td>
+                                <td>Downtime</td>
+                                <td>Machine #M04 reported unplanned stop > 30 minutes. Telegram alert sent.</td>
+                            </tr>
+                            <tr>
+                                <td>Today, 11:45</td>
+                                <td><span class="badge badge-warning">WARNING</span></td>
+                                <td>Maintenance</td>
+                                <td>Scheduled PM due for Stamping Press CNC 03 next shift.</td>
+                            </tr>
+                            <tr>
+                                <td>Today, 08:00</td>
+                                <td><span class="badge badge-success">INFO</span></td>
+                                <td>Shift Report</td>
+                                <td>Shift A OEE report successfully published to n8n webhook.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 7: SETTINGS -->
+            <div id="view-settings" class="section-view">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fa-solid fa-sliders me-2"></i>SCADA System & PLC Configuration</div>
+                    </div>
+                    <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Configure IP addresses, Modbus RTU baud rates, and polling intervals.</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label style="font-weight:600; font-size:0.85rem;">PLC IP Address (FX5U)</label>
+                            <input type="text" value="192.168.3.250" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight:600; font-size:0.85rem;">Modbus Polling Interval (ms)</label>
+                            <input type="text" value="1000" class="form-input">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- 3. FOOTER -->
+        <footer class="footer">
+            <div>© 2026 Esze Automation. All rights reserved.</div>
+            <div class="footer-links">
+                <a href="#">System Health</a>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Help & Support</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MODAL EDIT POPUP -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <span id="modalMachineTitle">Edit Inputs: CNC Milling Station 01</span>
+                <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="editForm" onsubmit="event.preventDefault(); saveMachineData();">
+                <input type="hidden" id="editMachineId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Shift Duration (Hours)</label>
+                        <input type="number" step="0.1" id="inputShiftHours" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Ideal Cycle Time (sec/pcs)</label>
+                        <input type="number" step="0.1" id="inputIdealCycle" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Planned Downtime (min)</label>
+                        <input type="number" id="inputPlannedDown" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Unplanned Downtime (min)</label>
+                        <input type="number" id="inputUnplannedDown" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Total Produced Parts</label>
+                        <input type="number" id="inputTotalCount" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Good Quality Parts</label>
+                        <input type="number" id="inputGoodCount" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn-save">Recalculate OEE</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Plain JavaScript (Vanilla JS) -->
+    <script>
+        // Initial Dataset
+        let machinesData = [
+            { id: "M01", name: "CNC Milling Station 01", shift_hours: 8, planned_downtime_min: 30, unplanned_downtime_min: 45, ideal_cycle_time_sec: 12, total_count: 1800, good_count: 1720 },
+            { id: "M02", name: "Robotic Assembly Line A", shift_hours: 12, planned_downtime_min: 60, unplanned_downtime_min: 20, ideal_cycle_time_sec: 5, total_count: 7000, good_count: 6850 },
+            { id: "M03", name: "Automatic Packaging Unit 03", shift_hours: 8, planned_downtime_min: 30, unplanned_downtime_min: 110, ideal_cycle_time_sec: 8, total_count: 2200, good_count: 2050 }
+        ];
+
+        // OEE Calculation Algorithm
+        function calculateOEE(m) {
+            const shiftMin = m.shift_hours * 60;
+            const plannedProdTime = Math.max(0, shiftMin - m.planned_downtime_min);
+            const runTime = Math.max(0, plannedProdTime - m.unplanned_downtime_min);
+
+            const availability = plannedProdTime > 0 ? (runTime / plannedProdTime) : 0;
+            
+            const idealTimeMin = (m.ideal_cycle_time_sec * m.total_count) / 60;
+            let performance = runTime > 0 ? (idealTimeMin / runTime) : 0;
+            if (performance > 1.0) performance = 1.0;
+
+            const quality = m.total_count > 0 ? (m.good_count / m.total_count) : 0;
+            const oee = availability * performance * quality;
+
+            return {
+                ...m,
+                availability_pct: (availability * 100).toFixed(1),
+                performance_pct: (performance * 100).toFixed(1),
+                quality_pct: (quality * 100).toFixed(1),
+                oee_pct: (oee * 100).toFixed(1)
+            };
+        }
+
+        // Render Machine Table
+        function renderTable() {
+            const tbody = document.getElementById('machineTableBody');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            let sumA = 0, sumP = 0, sumQ = 0, sumOEE = 0;
+
+            machinesData.forEach(raw => {
+                const m = calculateOEE(raw);
+                sumA += parseFloat(m.availability_pct);
+                sumP += parseFloat(m.performance_pct);
+                sumQ += parseFloat(m.quality_pct);
+                sumOEE += parseFloat(m.oee_pct);
+
+                let badgeClass = 'oee-badge-red';
+                if (m.oee_pct >= 85) badgeClass = 'oee-badge-green';
+                else if (m.oee_pct >= 65) badgeClass = 'oee-badge-yellow';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><b>${m.id}</b></td>
+                    <td>${m.name}</td>
+                    <td style="text-align: center;">${m.availability_pct}%</td>
+                    <td style="text-align: center;">${m.performance_pct}%</td>
+                    <td style="text-align: center;">${m.quality_pct}%</td>
+                    <td style="text-align: center;"><span class="badge ${badgeClass}">${m.oee_pct}%</span></td>
+                    <td style="text-align: center;">
+                        <button class="btn-edit" onclick="openModal('${m.id}')">
+                            <i class="fa-solid fa-pen-to-square me-1"></i> Edit Data
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update Summary Cards
+            const len = machinesData.length;
+            if(len > 0) {
+                document.getElementById('sumAvail').innerText = (sumA / len).toFixed(1) + '%';
+                document.getElementById('sumPerf').innerText = (sumP / len).toFixed(1) + '%';
+                document.getElementById('sumQual').innerText = (sumQ / len).toFixed(1) + '%';
+                document.getElementById('sumOEE').innerText = (sumOEE / len).toFixed(1) + '%';
+            }
+        }
+
+        // Modal Controls
+        function openModal(id) {
+            const machine = machinesData.find(m => m.id === id);
+            if (!machine) return;
+
+            document.getElementById('editMachineId').value = machine.id;
+            document.getElementById('modalMachineTitle').innerText = `Edit Inputs: ${machine.name}`;
+            document.getElementById('inputShiftHours').value = machine.shift_hours;
+            document.getElementById('inputIdealCycle').value = machine.ideal_cycle_time_sec;
+            document.getElementById('inputPlannedDown').value = machine.planned_downtime_min;
+            document.getElementById('inputUnplannedDown').value = machine.unplanned_downtime_min;
+            document.getElementById('inputTotalCount').value = machine.total_count;
+            document.getElementById('inputGoodCount').value = machine.good_count;
+
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        function saveMachineData() {
+            const id = document.getElementById('editMachineId').value;
+            const machine = machinesData.find(m => m.id === id);
+
+            if (machine) {
+                machine.shift_hours = parseFloat(document.getElementById('inputShiftHours').value) || 0;
+                machine.ideal_cycle_time_sec = parseFloat(document.getElementById('inputIdealCycle').value) || 0;
+                machine.planned_downtime_min = parseFloat(document.getElementById('inputPlannedDown').value) || 0;
+                machine.unplanned_downtime_min = parseFloat(document.getElementById('inputUnplannedDown').value) || 0;
+                machine.total_count = parseInt(document.getElementById('inputTotalCount').value) || 0;
+                machine.good_count = parseInt(document.getElementById('inputGoodCount').value) || 0;
+
+                renderTable();
+                closeModal();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar Navigation Tab Logic
+            const menuItems = document.querySelectorAll('.sidebar-menu li');
+            const views = document.querySelectorAll('.section-view');
+
+            menuItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    menuItems.forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+
+                    views.forEach(v => v.classList.remove('active'));
+                    const targetId = this.getAttribute('data-target');
+                    const targetView = document.getElementById(targetId);
+                    if (targetView) targetView.classList.add('active');
+                });
+            });
+
+            // Initialize Table
+            renderTable();
+
+            // Line Chart: OEE Trend
+            const ctxLine = document.getElementById('lineChart').getContext('2d');
+            new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'OEE Score (%)',
+                        data: [72, 78, 81, 79, 85, 82, 88],
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: false, min: 50, max: 100 } }
+                }
+            });
+
+            // Donut Chart: Loss Breakdown
+            const ctxDonut = document.getElementById('donutChart').getContext('2d');
+            new Chart(ctxDonut, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Good Production', 'Availability Loss', 'Performance Loss', 'Quality Defect'],
+                    datasets: [{
+                        data: [82, 8, 6, 4],
+                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b', '#a855f7']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // Bar Chart: Analytics
+            const ctxAnalytics = document.getElementById('analyticsChart').getContext('2d');
+            new Chart(ctxAnalytics, {
+                type: 'bar',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [
+                        { label: 'Availability (%)', data: [89, 90, 92, 91.5], backgroundColor: '#16a34a' },
+                        { label: 'Performance (%)', data: [93, 91, 94, 94.2], backgroundColor: '#2563eb' },
+                        { label: 'Quality (%)', data: [95, 96, 95.5, 95.6], backgroundColor: '#9333ea' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
